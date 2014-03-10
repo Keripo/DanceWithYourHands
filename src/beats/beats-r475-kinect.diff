@@ -1,0 +1,891 @@
+Index: beats/default.properties
+===================================================================
+--- beats/default.properties	(revision 475)
++++ beats/default.properties	(working copy)
+@@ -8,4 +8,4 @@
+ # project structure.
+ 
+ # Project target.
+-target=android-10
++target=android-8
+Index: beats/jni/testApp.cpp
+===================================================================
+--- beats/jni/testApp.cpp	(revision 0)
++++ beats/jni/testApp.cpp	(revision 0)
+@@ -0,0 +1,142 @@
++#include "testApp.h"
++
++void testApp::setup2()
++{
++	kinect.init();
++	kinect.setUseRGBCamera(false);
++	kinect.setVerbose(false);
++	kinect.open();
++}
++
++void testApp::setThresh(int thresh)
++{
++	kinectThresh = thresh;
++}
++
++void testApp::update2()
++{
++	kinect.update();
++	distancePixels = kinect.getDistancePixels();
++	count_tap = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 3; row < 9; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_tap++;
++			}
++		}
++	}
++	if (count_tap > (kinectThresh * 3) / 4) {
++		left = 1; // left
++	} else {
++		left = 0;
++	}
++	count_tap = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 3; row < 9; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 3;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_tap++;
++			}
++		}
++	}
++	if (count_tap > (kinectThresh * 3) / 4) {
++		right = 1;
++	} else {
++		right = 0;
++	}
++	count_tap = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 3; row < 9; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 1;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_tap++;
++			}
++		}
++	}
++	if (count_tap > kinectThresh) {
++		down = 1;
++	} else {
++		down = 0;
++	}
++	count_tap = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 3; row < 9; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 2;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_tap++;
++			}
++		}
++	}
++	if (count_tap > kinectThresh) {
++		up = 1;
++	} else {
++		up = 0;
++	}
++}
++
++//--------------------------------------------------------------
++void testApp::setup()
++{}
++
++//--------------------------------------------------------------
++void testApp::update()
++{}
++
++//--------------------------------------------------------------
++void testApp::draw()
++{}
++
++//--------------------------------------------------------------
++void testApp::exit(){
++	kinect.close();
++	kinect.clear();
++}
++
++//--------------------------------------------------------------
++void testApp::keyPressed (int key)
++{}
++
++//--------------------------------------------------------------
++void testApp::mouseMoved(int x, int y)
++{}
++
++//--------------------------------------------------------------
++void testApp::mouseDragged(int x, int y, int button)
++{}
++
++//--------------------------------------------------------------
++void testApp::mousePressed(int x, int y, int button)
++{}
++
++//--------------------------------------------------------------
++void testApp::mouseReleased(int x, int y, int button)
++{}
++
++//--------------------------------------------------------------
++void testApp::windowResized(int w, int h)
++{}
+Index: beats/jni/main.cpp
+===================================================================
+--- beats/jni/main.cpp	(revision 0)
++++ beats/jni/main.cpp	(revision 0)
+@@ -0,0 +1,56 @@
++#include "ofMain.h"
++#include "testApp.h"
++#include <jni.h>
++#include "ofAppAndroidWindow.h"
++
++//========================================================================
++extern "C"{
++testApp *kinectApp;
++
++// UNUSED
++void Java_cc_openframeworks_OFAndroid_init( JNIEnv*  env, jobject  thiz ){
++}
++
++void Java_cc_openframeworks_OFAndroid_setup2( JNIEnv*  env, jobject  thiz ){
++	kinectApp = new testApp();
++	kinectApp->setup2();
++}
++
++void Java_cc_openframeworks_OFAndroid_setThresh( JNIEnv*  env, jobject  thiz, jint thresh){
++	kinectApp->setThresh(thresh);
++}
++
++void Java_cc_openframeworks_OFAndroid_update2( JNIEnv*  env, jobject  thiz, jint thresh){
++	kinectApp->update2();
++}
++
++JNIEXPORT
++jint
++JNICALL Java_cc_openframeworks_OFAndroid_left( JNIEnv*  env, jobject  thiz, jint thresh){
++	return kinectApp->left;
++}
++
++JNIEXPORT
++jint
++JNICALL Java_cc_openframeworks_OFAndroid_down( JNIEnv*  env, jobject  thiz, jint thresh){
++	return kinectApp->down;
++}
++
++JNIEXPORT
++jint
++JNICALL Java_cc_openframeworks_OFAndroid_up( JNIEnv*  env, jobject  thiz, jint thresh){
++	return kinectApp->up;
++}
++
++JNIEXPORT
++jint
++JNICALL Java_cc_openframeworks_OFAndroid_right( JNIEnv*  env, jobject  thiz, jint thresh){
++	return kinectApp->right;
++}
++
++}
++
++// UNUSED
++int main(){
++	return 0;
++}
+Index: beats/jni/Android.mk
+===================================================================
+--- beats/jni/Android.mk	(revision 0)
++++ beats/jni/Android.mk	(revision 0)
+@@ -0,0 +1,54 @@
++LOCAL_PATH := $(call my-dir)
++
++include $(CLEAR_VARS)
++
++LOCAL_MODULE    := OFAndroidApp
++LOCAL_SRC_FILES := testApp.cpp main.cpp
++
++LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../build/prebuilt/linux-x86/arm-eabi-4.4.0/arm-eabi/include/c++/4.4.0 \
++			$(LOCAL_PATH)/../../../build/platforms/android-8/arch-arm/usr/include \
++			$(LOCAL_PATH)/../../../build/prebuilt/linux-x86/arm-eabi-4.4.0/arm-eabi/include/c++/4.4.0/arm-eabi \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/app/ \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/communication \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/events \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/graphics \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/sound \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/utils \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/freetype/include \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/freetype/include/freetype2 \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/glu/include_android \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/FreeImage/include \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxThread/src \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxVectorMath/src \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxOpenCv/src \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/poco/include \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/video \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxOpenCv/src/ \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxOpenCv/libs/opencv/include_android/ \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxKinect/libs/includes/ \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxKinect/src/ \
++			$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxAndroid/src
++
++LOCAL_CXXFLAGS += -DANDROID -D__ANDROID__ -isystem $(SYSROOT)/usr/include
++LOCAL_CFLAGS += -DANDROID -D__ANDROID__  $(LOCAL_C_INCLUDES:%=-I%)
++
++LOCAL_LDLIBS := -L$(LOCAL_PATH)/../../../build/prebuilt/linux-x86/arm-eabi-4.4.0/arm-eabi/lib/ \
++		-L$(LOCAL_PATH)/../../../build/platforms/android-8/arch-arm/usr/lib \
++		-L$(LOCAL_PATH)/../../../build/prebuilt/linux-x86/arm-eabi-4.4.0/lib/gcc/arm-eabi/4.4.0/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/openFrameworks/Debug/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/Debug/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/poco/lib/android/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/FreeImage/lib/android/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/freetype/lib/android/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/libs/glu/lib/android/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxOpenCv/libs/opencv/lib/android \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxOsc/libs/oscpack/lib/android/ \
++		-L$(LOCAL_PATH)/../../../../of_preRelease_v0062_android_FAT/addons/ofxKinect/libs/ \
++		-ldl -lstdc++ -lgcc -llog -lm -lc -laddons -loscpack -lopenFrameworks -lPocoUtil \
++		-lPocoFoundation -lfreetype -lfreeimage -lcv -lcxcore -lopencv_lapack -lcvaux -lGLU -lz -lGLESv1_CM
++
++
++
++include $(BUILD_SHARED_LIBRARY)
++
+Index: beats/jni/testApp.h
+===================================================================
+--- beats/jni/testApp.h	(revision 0)
++++ beats/jni/testApp.h	(revision 0)
+@@ -0,0 +1,45 @@
++#ifndef _TEST_APP
++#define _TEST_APP
++
++#include "ofMain.h"
++
++#include "ofxOpenCv.h"
++#include "ofxKinect.h"
++
++
++class testApp : public ofBaseApp
++{
++
++	public:
++		
++		// New stuff
++		void setup2();
++		void update2();
++		void setThresh(int thresh);
++		int kinectThresh;
++		int count_tap;
++		int left;
++		int down;
++		int up;
++		int right;
++		float *distancePixels;
++		
++		// Old dummied stuff
++		void setup();
++		void update();
++		void draw();
++		void exit();
++
++		//void drawPointCloud();
++
++		void keyPressed  (int key);
++		void mouseMoved(int x, int y );
++		void mouseDragged(int x, int y, int button);
++		void mousePressed(int x, int y, int button);
++		void mouseReleased(int x, int y, int button);
++		void windowResized(int w, int h);
++
++		ofxKinect kinect;
++};
++
++#endif
+Index: beats/.project
+===================================================================
+--- beats/.project	(revision 473)
++++ beats/.project	(working copy)
+@@ -1,33 +1,40 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<projectDescription>
+-	<name>Beats</name>
+-	<comment></comment>
+-	<projects>
+-	</projects>
+-	<buildSpec>
+-		<buildCommand>
+-			<name>com.android.ide.eclipse.adt.ResourceManagerBuilder</name>
+-			<arguments>
+-			</arguments>
+-		</buildCommand>
+-		<buildCommand>
+-			<name>com.android.ide.eclipse.adt.PreCompilerBuilder</name>
+-			<arguments>
+-			</arguments>
+-		</buildCommand>
+-		<buildCommand>
+-			<name>org.eclipse.jdt.core.javabuilder</name>
+-			<arguments>
+-			</arguments>
+-		</buildCommand>
+-		<buildCommand>
+-			<name>com.android.ide.eclipse.adt.ApkBuilder</name>
+-			<arguments>
+-			</arguments>
+-		</buildCommand>
+-	</buildSpec>
+-	<natures>
+-		<nature>com.android.ide.eclipse.adt.AndroidNature</nature>
+-		<nature>org.eclipse.jdt.core.javanature</nature>
+-	</natures>
+-</projectDescription>
++<?xml version="1.0" encoding="UTF-8"?>
++<projectDescription>
++	<name>Beats</name>
++	<comment></comment>
++	<projects>
++	</projects>
++	<buildSpec>
++		<buildCommand>
++			<name>com.android.ide.eclipse.adt.ResourceManagerBuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++		<buildCommand>
++			<name>com.android.ide.eclipse.adt.PreCompilerBuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++		<buildCommand>
++			<name>org.eclipse.jdt.core.javabuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++		<buildCommand>
++			<name>com.android.ide.eclipse.adt.ApkBuilder</name>
++			<arguments>
++			</arguments>
++		</buildCommand>
++	</buildSpec>
++	<natures>
++		<nature>com.android.ide.eclipse.adt.AndroidNature</nature>
++		<nature>org.eclipse.jdt.core.javanature</nature>
++	</natures>
++	<linkedResources>
++		<link>
++			<name>ofAndroLib_src</name>
++			<type>2</type>
++			<location>/home/noritsuna/kinect/of_preRelease_v0062_android_FAT/addons/ofxAndroid/ofAndroidLib/src</location>
++		</link>
++	</linkedResources>
++</projectDescription>
+Index: beats/src/com/beatsportable/beats/GUIHandlerTap.java
+===================================================================
+--- beats/src/com/beatsportable/beats/GUIHandlerTap.java	(revision 473)
++++ beats/src/com/beatsportable/beats/GUIHandlerTap.java	(working copy)
+@@ -5,6 +5,9 @@
+ import android.graphics.Canvas;
+ import android.graphics.Paint;
+ import android.graphics.Rect;
++import android.os.AsyncTask;
++import cc.openframeworks.OFAndroid;
++
+ import com.beatsportable.beats.DataNote.NoteType;
+ import com.beatsportable.beats.GUIScore.*;
+ 
+@@ -77,6 +80,16 @@
+ 		debugTapboxRects = new Rect[Tools.PITCHES];
+ 		
+ 		//setupXY(); // Call in GUIGame
++		
++		// Kinect
++		System.loadLibrary("OFAndroidApp");
++		OFAndroid.setup2();
++		KinectInput.h = this;
++		KinectInput.kinectThresh = Integer.valueOf(
++				Tools.getSetting(R.string.kinectDist, R.string.kinectDistDefault));
++		OFAndroid.setThresh(KinectInput.kinectThresh);
++		KinectInput.kinectFrames = 0;
++		KinectInput.kinectFramesTotal = 0;
+ 	}
+ 	
+ 	@Override
+@@ -210,6 +223,9 @@
+ 			offScreenTime = yToTime(Tools.screen_h);
+ 		}
+ 		
++		// Kinect
++		new KinectInput().execute();
++		
+ 		// TODO
+ 		// I think logic flow of events should be changed so onTouchDown_One
+ 		// combo updating code is here instead of in reaction to the touch event
+@@ -223,7 +239,7 @@
+ 				
+ 				o.onHold(currentTime, score);
+ 				
+-				if (currentTime > o.end_time) {
++				if (currentTime > o.end_time || o.start_time == o.end_time) {
+ 					AccuracyTypes acc = o.onLastFrame(currentTime, score, true);
+ 					
+ 					if (acc != AccuracyTypes.X_IGNORE_ABOVE) {
+@@ -523,3 +539,44 @@
+ 	}
+ 	
+ }
++
++class KinectInput extends AsyncTask<Void, Void, Void> {
++	protected static GUIHandlerTap h;
++	protected static int kinectThresh;
++	private static int mutex = 0;
++	
++	@Override
++	protected Void doInBackground(Void... arg0) {
++		if (mutex != 1) {
++			mutex = 1;
++			OFAndroid.update3();
++			if (OFAndroid.left() == 1) {
++				h.onTouch_Down_One(3);
++			} else {
++				h.onTouch_Up_One(3);
++			}
++			if (OFAndroid.down() == 1) {
++				h.onTouch_Down_One(2);
++			} else {
++				h.onTouch_Up_One(2);
++			}
++			if (OFAndroid.up() == 1) {
++				h.onTouch_Down_One(1);
++			} else {
++				h.onTouch_Up_One(1);
++			}
++			if (OFAndroid.right() == 1) {
++				h.onTouch_Down_One(0);
++			} else {
++				h.onTouch_Up_One(0);
++			}
++			kinectFrames++;
++			mutex = 0;
++		}
++	}
++	
++	public static int kinectFrames = 0;
++	public static int kinectFramesTotal = 0;
++	
++}
++
+Index: beats/src/com/beatsportable/beats/Tools.java
+===================================================================
+--- beats/src/com/beatsportable/beats/Tools.java	(revision 473)
++++ beats/src/com/beatsportable/beats/Tools.java	(working copy)
+@@ -197,6 +197,7 @@
+ 	}
+ 	
+ 	public static void toast(String msg) {
++		/*
+ 		if (c == null) return;
+ 		try {
+ 			Toast.makeText(c, msg, Toast.LENGTH_SHORT).show();
+@@ -205,9 +206,11 @@
+ 			ToolsTracker.error("Tools.toast", e, c.getLocalClassName());
+ 		}
+ 		debugLogCat(msg);
++		*/
+ 	}
+ 	
+ 	public static void toast_long(String msg) {
++		/*
+ 		if (c == null) return;
+ 		try {
+ 			Toast.makeText(c, msg, Toast.LENGTH_LONG).show();
+@@ -216,6 +219,7 @@
+ 			ToolsTracker.error("Tools.toast_long", e, c.getLocalClassName());
+ 		}
+ 		debugLogCat(msg);
++		*/
+ 	}
+ 	
+ 	public static OnClickListener cancel_action = new OnClickListener() {
+@@ -239,6 +243,7 @@
+ 			final int ignoreSetting, boolean checked,
+ 			boolean cancelable
+ 		) {
++		/*
+ 		if (c == null) return;
+ 		
+ 		AlertDialog.Builder alertBuilder = new AlertDialog.Builder(c);
+@@ -282,6 +287,7 @@
+ 		alertBuilder.show().setOwnerActivity(c);
+ 		
+ 		debugLogCat(msg.toString());
++		*/
+ 	}
+ 	
+ 	public static void note(
+Index: beats/src/com/beatsportable/beats/MenuHome.java
+===================================================================
+--- beats/src/com/beatsportable/beats/MenuHome.java	(revision 476)
++++ beats/src/com/beatsportable/beats/MenuHome.java	(working copy)
+@@ -33,6 +33,7 @@
+ 	private static Locale defaultLocale;
+ 	
+ 	// AdMob
++	/*
+ 	private AdView adMobView;
+ 	private static final HashSet<String> adMobKeyWordsSet = new HashSet<String>();
+ 	static {
+@@ -42,12 +43,14 @@
+ 		adMobKeyWordsSet.add("arcade game");
+ 		adMobKeyWordsSet.add("action game");
+ 	}
++	*/
+ 	
+ 	// MobFox
+-	private MobFoxView mobFoxView;
++	//private MobFoxView mobFoxView;
+ 	
+ 	// Startup Warnings
+ 	private void versionCheck() {
++		/*
+ 		if (Integer.parseInt(Build.VERSION.SDK) < 7 &&
+ 			!Tools.getBooleanSetting(R.string.ignoreLegacyWarning, R.string.ignoreLegacyWarningDefault)) {
+ 			// Multitouch warning			
+@@ -56,13 +59,15 @@
+ 					Tools.cancel_action, R.string.ignoreLegacyWarning
+ 					);
+ 		}
++		*/
+ 	}
+ 	
+ 	private void updateCheck() {
+-		new ToolsUpdateTask().execute(Tools.getString(R.string.Url_version));
++		//new ToolsUpdateTask().execute(Tools.getString(R.string.Url_version));
+ 	}
+ 	
+ 	private void showBackgroundData() {
++		/*
+ 		// Background data warning
+ 		DialogInterface.OnClickListener sync_action = new DialogInterface.OnClickListener() {
+ 			public void onClick(DialogInterface dialog, int id) {
+@@ -90,10 +95,12 @@
+ 				cancel_action,
+ 				R.string.ignoreSyncWarning
+ 				);
++		*/
+ 	}
+ 	
+ 	// On Finish
+ 	private void backgroundDataUncheck() {
++		/*
+ 		ConnectivityManager cm = (ConnectivityManager)getSystemService(Context.CONNECTIVITY_SERVICE);
+ 		if (Tools.disabledBackgroundData && !cm.getBackgroundDataSetting()) {
+ 			// Background data warning
+@@ -130,10 +137,12 @@
+ 		} else {
+ 			finish();
+ 		}
++		*/
++		finish();
+ 	}
+ 	
+ 	private void showNotes() {
+-		
++		/*
+ 		// New User notes
+ 		if (!Tools.getBooleanSetting(R.string.ignoreNewUserNotes, R.string.ignoreNewUserNotesDefault)) {
+ 			
+@@ -206,6 +215,7 @@
+ 			// Always make folders
+ 			if (Tools.isMediaMounted()) Tools.makeBeatsDir();
+ 		}
++		*/
+ 	}
+ 	
+ 	// Activity Result
+@@ -256,8 +266,9 @@
+ 	
+ 	// Update layout images
+ 	private void updateLayout() {
+-		updateLanguage();
++		//updateLanguage();
+ 		
++		/*
+ 		// AdMob
+ 		AdRequest adMobAd = new AdRequest();
+ 		adMobAd.setKeywords(adMobKeyWordsSet);
+@@ -266,6 +277,7 @@
+ 		// MobFox
+ 		mobFoxView.pause();
+ 		mobFoxView.resume();
++		*/
+ 		
+ 		// Titlebar
+ 		title = Tools.getString(R.string.MenuHome_titlebar) + " [" + Tools.getString(R.string.App_version) + "]";
+@@ -376,13 +388,15 @@
+ 		if (Tools.getBooleanSetting(R.string.resetSettings, R.string.resetSettingsDefault)) {
+ 			Tools.resetSettings();
+ 		}
++		/*
+ 		if (Tools.getBooleanSetting(R.string.additionalVibrations, R.string.additionalVibrationsDefault)) {
+ 			((Vibrator) getSystemService(Context.VIBRATOR_SERVICE)).vibrate(300); // ready to rumble!
+ 		}
++		*/
+ 		updateCheck();
+ 		setupLayout();
+-		versionCheck();
+-		showNotes();
++		//versionCheck();
++		//showNotes();
+ 	}
+ 	
+ 	private void formatMenuItem(final TextView tv, int text) {
+@@ -415,8 +429,9 @@
+ 	
+ 	private void setupLayout() {
+ 		setContentView(R.layout.main);
+-		setVolumeControlStream(AudioManager.STREAM_MUSIC); // To control media volume at all times
++		//setVolumeControlStream(AudioManager.STREAM_MUSIC); // To control media volume at all times
+ 		
++		/*
+ 		// For ads
+ 		LayoutParams params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+ 		params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+@@ -431,6 +446,7 @@
+ 		adMobView = new AdView(this, AdSize.BANNER, getResources().getString(R.string.AdMob_key));
+ 		adMobView.setGravity(RelativeLayout.ALIGN_PARENT_BOTTOM);
+ 		layout.addView(adMobView, params);
++		*/
+ 		
+ 		backgroundRes = -1; // Force background reload
+ 		updateLayout();
+@@ -481,11 +497,11 @@
+ 		TextView select_song_b = (TextView) findViewById(R.id.select_song);
+ 		select_song_b.setOnClickListener(new OnClickListener() {
+ 			public void onClick(View v) {
+-				if (Tools.isMediaMounted()) {
++				//if (Tools.isMediaMounted()) {
+ 					Intent i = new Intent();
+ 					i.setClass(MenuHome.this, MenuFileChooser.class);
+ 					startActivityForResult(i, SELECT_MUSIC);
+-				}
++				//}
+ 			}
+ 		});
+ 		
+@@ -495,6 +511,7 @@
+ 			public void onClick(View v) {
+ 				Intent i = new Intent();
+ 				i.setClass(MenuHome.this, MenuSettings.class);
++				//i.setClass(MenuHome.this, OFsample2.class);
+ 				startActivity(i);
+ 			}
+ 		});
+Index: beats/src/com/beatsportable/beats/GUIGame.java
+===================================================================
+--- beats/src/com/beatsportable/beats/GUIGame.java	(revision 473)
++++ beats/src/com/beatsportable/beats/GUIGame.java	(working copy)
+@@ -245,7 +245,9 @@
+ 		private long fpsStartTime = 0;
+ 		private long fpsTotalTime = 0;
+ 		private double fps = 0;
++		private double fpsK = 0;
+ 		private double fpsTotal = 0;
++		private double fpsTotalK = 0;
+ 		private String fpsTruncated = "";
+ 		private String fpsTruncatedTotal = "";
+ 		private boolean fpsTotalStarted = false;
+@@ -625,19 +627,22 @@
+ 				if (frameCount > 10) {
+ 					long fpsCurrentTime = SystemClock.elapsedRealtime(); 
+ 					fps = ((double)(frameCount) / ((double)(fpsCurrentTime - fpsStartTime) / 1000d));
++					fpsK = ((double)(KinectInput.kinectFrames) / ((double)(fpsCurrentTime - fpsStartTime) / 1000d));
+ 					// Truncate to 2 decimal places
+-					fpsTruncated = String.format("%.2f", fps);
++					fpsTruncated = String.format("%.2f %.2f", fps, fpsK);
+ 					if (fpsTotalStarted) {
+ 						frameCountTotal += frameCount;
++						KinectInput.kinectFramesTotal += KinectInput.kinectFrames;
+ 						fpsTotalTime += fpsCurrentTime - fpsStartTime;
+ 						fpsTotal = ((double)(frameCountTotal) / ((double)(fpsTotalTime) / 1000d));
+-						fpsTruncatedTotal = String.format("%.2f", fpsTotal);
++						fpsTotalK = ((double)(KinectInput.kinectFramesTotal) / ((double)(fpsTotalTime) / 1000d));
++						fpsTruncatedTotal = String.format("%.2f %.2f", fpsTotal, fpsTotalK);
+ 					} else {
+ 						if (fps > 0 && fps < 99) { // Sanity
+ 							fpsTotalStarted = true;
+ 						}
+ 					}
+-					
++					KinectInput.kinectFrames = 0;
+ 					frameCount = 0;
+ 					fpsStartTime = SystemClock.elapsedRealtime();
+ 				}
+Index: beats/res/raw/samples.zip
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+Index: beats/res/values/arrays_const.xml
+===================================================================
+--- beats/res/values/arrays_const.xml	(revision 473)
++++ beats/res/values/arrays_const.xml	(working copy)
+@@ -8,6 +8,17 @@
+ 		<item>1</item>
+ 	</string-array>
+ 	
++	<string-array name="kinectDistValues">
++		<item>5</item>
++		<item>10</item>
++		<item>15</item>
++		<item>20</item>
++		<item>25</item>
++		<item>30</item>
++		<item>35</item>
++		<item>40</item>
++	</string-array>
++	
+ 	<string-array name="difficultyLevelValues">
+ 		<item>0</item>
+ 		<item>1</item>
+Index: beats/res/values/settings_trans.xml
+===================================================================
+--- beats/res/values/settings_trans.xml	(revision 476)
++++ beats/res/values/settings_trans.xml	(working copy)
+@@ -71,6 +71,8 @@
+   <string name="backgroundImageDesc">"Background image for main menu and stepfiles without one"</string>
+   <string name="orientationTitle">"Screen Orientation"</string>
+   <string name="orientationDesc">"Default screen orientation during gameplay"</string>
++  <string name="kinectDistTitle">"Kinect Distance"</string>
++  <string name="kinectDistDesc">"Tap distance threshold"</string>
+   <string name="tapboxLayoutTitle">"Tapbox Layout"</string>
+   <string name="tapboxLayoutDesc">"Arrangement of tapboxes"</string>
+   <string name="tapboxFadingTitle">"Tapbox Fading"</string>
+Index: beats/res/values/constants.xml
+===================================================================
+--- beats/res/values/constants.xml	(revision 476)
++++ beats/res/values/constants.xml	(working copy)
+@@ -78,6 +78,8 @@
+ 	<string name="backgroundImageDefault">"blue"</string>
+ 	<string name="orientation">"orientation"</string>
+ 	<string name="orientationDefault">"2"</string>
++	<string name="kinectDist">"kinectDist"</string>
++	<string name="kinectDistDefault">"15"</string>
+ 	<string name="tapboxLayout">"tapboxLayout"</string>
+ 	<string name="tapboxLayoutDefault">"standard"</string>
+ 	<string name="tapboxFading">"tapboxFading"</string>
+Index: beats/res/xml/settings.xml
+===================================================================
+--- beats/res/xml/settings.xml	(revision 476)
++++ beats/res/xml/settings.xml	(working copy)
+@@ -130,6 +130,13 @@
+ 	</PreferenceCategory>
+ 	<PreferenceCategory android:title="@string/tapSettingsCategoryTitle">
+ 		<ListPreference
++			android:title="@string/kinectDistTitle"
++			android:summary="@string/kinectDistDesc"
++			android:key="@string/kinectDist"
++			android:defaultValue="@string/kinectDistDefault"
++			android:entries="@array/kinectDistValues"
++			android:entryValues="@array/kinectDistValues" />
++		<ListPreference
+ 			android:title="@string/tapboxFadingTitle"
+ 			android:summary="@string/tapboxFadingDesc"
+ 			android:key="@string/tapboxFading"
+Index: beats/.classpath
+===================================================================
+--- beats/.classpath	(revision 475)
++++ beats/.classpath	(working copy)
+@@ -1,10 +1,11 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<classpath>
+-	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
+-	<classpathentry kind="src" path="src"/>
+-	<classpathentry kind="src" path="gen"/>
+-	<classpathentry kind="lib" path="libs/GoogleAdMobAdsSdk-4.0.4.jar"/>
+-	<classpathentry kind="lib" path="libs/mobfoxsdk-1.1.jar"/>
+-	<classpathentry kind="lib" path="libs/UHL.jar"/>
+-	<classpathentry kind="output" path="bin"/>
+-</classpath>
++<?xml version="1.0" encoding="UTF-8"?>
++<classpath>
++	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
++	<classpathentry kind="src" path="src"/>
++	<classpathentry kind="src" path="ofAndroLib_src"/>
++	<classpathentry kind="src" path="gen"/>
++	<classpathentry kind="lib" path="libs/GoogleAdMobAdsSdk-4.0.4.jar"/>
++	<classpathentry kind="lib" path="libs/mobfoxsdk-1.1.jar"/>
++	<classpathentry kind="lib" path="libs/UHL.jar"/>
++	<classpathentry kind="output" path="bin"/>
++</classpath>
+Index: beats/AndroidManifest.xml
+===================================================================
+--- beats/AndroidManifest.xml	(revision 476)
++++ beats/AndroidManifest.xml	(working copy)
+@@ -3,12 +3,10 @@
+ 	xmlns:android="http://schemas.android.com/apk/res/android"
+ 	package="com.beatsportable.beats"
+ 	android:versionName="@string/App_version"
+-	android:versionCode="13"
+-	android:installLocation="preferExternal"
+-	>
++	android:versionCode="13" android:installLocation="auto">
+ 	<uses-sdk
+ 		android:minSdkVersion="3"
+-		android:targetSdkVersion="10"
++		android:targetSdkVersion="8"
+ 	/>
+ 	<!-- TODO:
+ 		 android:anyDensity is set to false to have scaled, uniform appearance
+@@ -19,18 +17,15 @@
+ 		android:smallScreens="true"
+ 		android:normalScreens="true"
+ 		android:largeScreens="true"
+-		android:xlargeScreens="true"
+ 		android:anyDensity="false"
+ 		android:resizeable="true"
+ 	/>
+-	<uses-permission android:name="android.permission.INTERNET"/> <!-- Web-browser, AdMob, MobFox, Localytics -->
+-	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> <!-- AdMob, MobFox -->
+-	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/> <!-- MobFox -->
+-	<uses-permission android:name="android.permission.READ_PHONE_STATE"/> <!-- MobFox -->
+ 	<uses-permission android:name="android.permission.VIBRATE"/> <!-- Game -->
+ 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/> <!-- Updates -->
++	<uses-permission android:name="android.permission.CAMERA"/>
+ 	<!-- This is probably deprecated after 1.6 but try it anyway -->
+ 	<uses-permission android:name="android.permission.RAISED_THREAD_PRIORITY"/> <!-- Game -->
++	
+ 	<application
+ 		android:enabled="true"
+ 		android:icon="@drawable/icon"
+Index: beats/Application.mk
+===================================================================
+--- beats/Application.mk	(revision 0)
++++ beats/Application.mk	(revision 0)
+@@ -0,0 +1,3 @@
++APP_PROJECT_PATH := $(call my-dir)
++LOCAL_MODULE    := OFAndroidApp
++LOCAL_SRC_FILES := testApp.cpp main.cpp
+\ No newline at end of file

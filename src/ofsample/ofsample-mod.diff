@@ -1,0 +1,296 @@
+--- ofsample/jni/testApp.cpp	Thu Jan 15 04:14:12 1970
++++ ofsample/jni/testApp.cpp	Thu Jan 15 04:14:12 1970
+@@ -4,25 +4,13 @@
+ //--------------------------------------------------------------
+ void testApp::setup()
+ {
+-	//kinect.init(true);  //shows infrared image
+ 	kinect.init();
+ 	kinect.setUseRGBCamera(false);
+ 	kinect.setVerbose(false);
+ 	kinect.open();
+-/*
+-	colorImg.allocate(kinect.width, kinect.height);
++
+ 	grayImage.allocate(kinect.width, kinect.height);
+-	grayThresh.allocate(kinect.width, kinect.height);
+-	grayThreshFar.allocate(kinect.width, kinect.height);
+-*/
+-	nearThreshold = 50;
+-	farThreshold  = 180;
+-	bThreshWithOpenCV = true;
+-	
+ 	ofSetFrameRate(10);
+-
+-	angle = 0;
+-	kinect.setCameraTiltAngle(angle);
+ }
+ 
+ //--------------------------------------------------------------
+@@ -31,95 +19,109 @@
+ 	ofBackground(100, 100, 100);
+ 	kinect.update();
+ 
+-//	unsigned char 	* kinect.getDepthPixels();		// grey scale values
+-//	unsigned short	* kinect.getRawDepthPixels();	// raw 11 bit values
++	// 640 x 480
++	// 4 x (4 x 12 -> 40p x 40p)
++	// Each count can max at 48
++	// 6 is our experimentally determined threshold of an acceptable "press"
++	float *distancePixels = kinect.getDistancePixels();
++
++	count_left = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 0; row < 12; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_left++;
++			}
++		}
++	}
+ 
++	count_down = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 0; row < 12; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 1;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_down++;
++			}
++		}
++	}
+ 
+-/*
+-	grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
+-		
+-	//we do two thresholds - one for the far plane and one for the near plane
+-	//we then do a cvAnd to get the pixels which are a union of the two thresholds.	
+-	if( bThreshWithOpenCV ){
+-		grayThreshFar = grayImage;
+-		grayThresh = grayImage;
+-		grayThreshFar.threshold(farThreshold, true);
+-		grayThresh.threshold(nearThreshold);
+-		cvAnd(grayThresh.getCvImage(), grayThreshFar.getCvImage(), grayImage.getCvImage(), NULL);
+-	}else{
+-	
+-		//or we do it ourselves - show people how they can work with the pixels
+-	
+-		unsigned char * pix = grayImage.getPixels();
+-		int numPixels = grayImage.getWidth() * grayImage.getHeight();
+-
+-		for(int i = 0; i < numPixels; i++){
+-			if( pix[i] > nearThreshold && pix[i] < farThreshold ){
+-				pix[i] = 255;
+-			}else{
+-				pix[i] = 0;
++	count_up = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 0; row < 12; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 2;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_up++;
+ 			}
+ 		}
+ 	}
+ 
+-	//update the cv image
+-	grayImage.flagImageChanged();
++	count_right = 0;
++	for (int column = 0; column < 4; column++) {
++		for (int row = 0; row < 12; row++) {
++			int count = 0;
++			for (int y = 0; y < 40; y++) {
++				for (int x = 0; x < 40; x++) {
++					int i = (row * 40 + y) * 640 + column * 40 + x + 160 * 3;
++					if(distancePixels[i] < 100) count++;
++				}
++			}
++			if (count > 800) { // More than half
++				count_right++;
++			}
++		}
++	}
+ 
+-    // find contours which are between the size of 20 pixels and 1/3 the w*h pixels.
+-    // also, find holes is set to true so we will get interior contours as well....
+-    contourFinder.findContours(grayImage, 10, (kinect.width*kinect.height)/2, 20, false);
+-*/
++
++	// For graphics
++	grayImage.setFromPixels(kinect.getDepthPixels(), kinect.width, kinect.height);
++	unsigned char * pix = grayImage.getPixels();
++	int numPixels = grayImage.getWidth() * grayImage.getHeight();
++	for(int i = 0; i < numPixels; i++){
++		if(distancePixels[i] < 100){
++			pix[i] = 255;
++		}else{
++			pix[i] = 0;
++		}
++	}
+ }
+ 
+ //--------------------------------------------------------------
+ void testApp::draw()
+ {
+ 
+-	ofSetColor(255, 255, 255);
++	ofSetColor(255, 255, 0); // yellow
++	grayImage.draw(0, 0, 640, 480);
+ 
+-	kinect.drawDepth(80, 10, 320, 240);
+-	//draw RGB Camera image
+-	//kinect.draw(410, 10, 320, 240);
+-	
+-//	grayImage.draw(10, 320, 400, 300);
+-//	contourFinder.draw(10, 320, 400, 300);
+-	
+-	//ofPushMatrix();
+-	//ofTranslate(420, 320);
+-	// point cloud is commented out because we need a proper camera class to explore it effectively
+-	//drawPointCloud();
+-	//ofPopMatrix();
+-
+-	ofSetColor(255, 255, 255);
+-	ofDrawBitmapString("accel is: " + ofToString(kinect.getMksAccel().x, 2) + " / "
+-									+ ofToString(kinect.getMksAccel().y, 2) + " / "
+-									+ ofToString(kinect.getMksAccel().z, 2), 10, 250);
+ 
++	ofSetColor(155, 155, 255); // lavendar
+ 	char reportStr[1024];
+-	sprintf(reportStr, "using opencv threshold = %i (press spacebar)\nset near threshold %i (press: + -)\nset far threshold %i (press: < >) num blobs found %i, fps: %f",bThreshWithOpenCV, nearThreshold, farThreshold, contourFinder.nBlobs, ofGetFrameRate());
++	float *distancePixels = kinect.getDistancePixels();
++	sprintf(
++			reportStr,
++			"L %d / D %d / U %d / R %d / dist[200] %f / fps: %f",
++			count_left, count_down, count_up, count_right, distancePixels[200], ofGetFrameRate()
++			);
+ 	ofDrawBitmapString(reportStr, 10, 270);
+-	ofDrawBitmapString("tilt angle: " + ofToString(angle),10,260);
+-
+-
+ }
+-/**
+-void testApp::drawPointCloud() {
+-	ofScale(400, 400, 400);
+-	int w = 640;
+-	int h = 480;
+-	ofRotateY(mouseX);
+-	float* distancePixels = kinect.getDistancePixels();
+-	glBegin(GL_POINTS);
+-	int step = 2;
+-	for(int y = 0; y < h; y += step) {
+-		for(int x = 0; x < w; x += step) {
+-			ofPoint cur = kinect.getWorldCoordinateFor(x, y);
+-			glVertex3f(cur.x, cur.y, cur.z);
+-		}
+-	}
+-	glEnd();
+-}
+-*/
++
+ //--------------------------------------------------------------
+ void testApp::exit(){
+ 	kinect.close();
+@@ -128,50 +130,7 @@
+ 
+ //--------------------------------------------------------------
+ void testApp::keyPressed (int key)
+-{
+-	switch (key)
+-	{
+-		case ' ':
+-			bThreshWithOpenCV = !bThreshWithOpenCV;
+-		break;
+-	
+-		case '>':
+-		case '.':
+-			farThreshold ++;
+-			if (farThreshold > 255) farThreshold = 255;
+-			break;
+-		case '<':		
+-		case ',':		
+-			farThreshold --;
+-			if (farThreshold < 0) farThreshold = 0;
+-			break;
+-			
+-		case '+':
+-		case '=':
+-			nearThreshold ++;
+-			if (nearThreshold > 255) nearThreshold = 255;
+-			break;
+-		case '-':		
+-			nearThreshold --;
+-			if (nearThreshold < 0) nearThreshold = 0;
+-			break;
+-		case 'w':
+-			kinect.enableDepthNearValueWhite(!kinect.isDepthNearValueWhite());
+-			break;
+-
+-		case OF_KEY_UP:
+-			angle++;
+-			if(angle>30) angle=30;
+-			kinect.setCameraTiltAngle(angle);
+-			break;
+-
+-		case OF_KEY_DOWN:
+-			angle--;
+-			if(angle<-30) angle=-30;
+-			kinect.setCameraTiltAngle(angle);
+-			break;
+-	}
+-}
++{}
+ 
+ //--------------------------------------------------------------
+ void testApp::mouseMoved(int x, int y)
+@@ -192,4 +151,3 @@
+ //--------------------------------------------------------------
+ void testApp::windowResized(int w, int h)
+ {}
+-
+--- ofsample/jni/testApp.h	Thu Jan 15 04:14:12 1970
++++ ofsample/jni/testApp.h	Thu Jan 15 04:14:12 1970
+@@ -28,22 +28,12 @@
+ 
+ 		ofxKinect kinect;
+ 
+-		ofxCvColorImage		colorImg;
+-
+ 		ofxCvGrayscaleImage 	grayImage;
+-		ofxCvGrayscaleImage 	grayThresh;
+-		ofxCvGrayscaleImage 	grayThreshFar;
+-
+-		ofxCvContourFinder 	contourFinder;
+-		
+-		bool				bThreshWithOpenCV;
+-
+-		int 				nearThreshold;
+-		int					farThreshold;
+-
+-		int					angle;
+-		int 				count;
+ 
++		int count_left;
++		int count_down;
++		int count_up;
++		int count_right;
+ };
+ 
+ #endif
